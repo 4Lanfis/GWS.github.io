@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="de" class="h-full bg-gc-50 text-slate-800">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geocaching Würfel Rätsel - Ein Geocache von den 4Lanfis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        gc: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#008744',
+                            600: '#007038',
+                            700: '#00592c',
+                            800: '#064e3b',
+                            900: '#022c22',
+                            950: '#011c15',
+                        },
+                        gcOrange: '#f26522',
+                        gcBlue: '#00aeef',
+                        gcYellow: '#ffc20e'
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .glass-panel {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+        }
+        
+        .topo-bg {
+            background-color: #f0fdf4;
+            background-image: radial-gradient(circle at 50% 0%, rgba(0, 135, 68, 0.12) 0%, transparent 70%),
+                              radial-gradient(circle at 100% 100%, rgba(0, 174, 239, 0.08) 0%, transparent 60%);
+        }
+
+        .dice {
+            width: 58px;
+            height: 58px;
+            position: relative;
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-radius: 14px;
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.05), 0 6px 12px rgba(0,0,0,0.08), 0 0 0 1px rgba(0,135,68,0.15);
+            border: 2px solid #cbd5e1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            grid-template-rows: repeat(3, 1fr);
+            padding: 5px;
+            box-sizing: border-box;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        @media (min-width: 640px) {
+            .dice {
+                width: 68px;
+                height: 68px;
+                padding: 7px;
+                border-radius: 16px;
+            }
+        }
+
+        .dot {
+            width: 9px;
+            height: 9px;
+            background-color: #007038;
+            border-radius: 50%;
+            justify-self: center;
+            align-self: center;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        @media (min-width: 640px) {
+            .dot {
+                width: 11px;
+                height: 11px;
+            }
+        }
+
+        .dice-rolling {
+            animation: rollAnimation 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        @keyframes rollAnimation {
+            0% { transform: rotate(0deg) scale(0.7); opacity: 0.4; }
+            50% { transform: rotate(180deg) scale(1.1); opacity: 0.9; }
+            100% { transform: rotate(360deg) scale(1); opacity: 1; }
+        }
+
+        .gc-glow {
+            box-shadow: 0 10px 30px rgba(0, 135, 68, 0.08);
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between topo-bg font-sans text-slate-800 selection:bg-gc-500 selection:text-white">
+
+    <!-- Navigation Header -->
+    <header class="w-full max-w-5xl mx-auto px-4 py-4 flex items-center justify-between border-b border-slate-200">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 p-1 grid grid-cols-2 gap-1 shadow-sm">
+                <div class="bg-gc-500 rounded-sm"></div>
+                <div class="bg-gcOrange rounded-sm"></div>
+                <div class="bg-gcBlue rounded-sm"></div>
+                <div class="bg-gcYellow rounded-sm"></div>
+            </div>
+            <div>
+                <h1 class="text-xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+                    GEOCACHING <span class="text-gc-600 font-bold">WÜRFEL RÄTSEL</span>
+                </h1>
+                <p class="text-xs text-gc-700 font-semibold font-mono">Ein Geocache von den 4Lanfis</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button id="btn-toggle-music" class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-semibold text-gc-700 transition cursor-pointer">
+                <span id="music-icon">🎵</span> <span id="music-text" class="font-mono">Musik: Aus</span>
+            </button>
+            <div class="hidden sm:flex items-center gap-2 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-xl text-xs font-mono text-gc-700 font-semibold">
+                <span>GCBYHWC</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Container -->
+    <main class="w-full max-w-4xl mx-auto px-4 py-6 flex-1 flex flex-col justify-center items-center">
+        
+        <!-- Progress Bar & Round Status -->
+        <div class="w-full max-w-xl mb-5">
+            <div class="flex justify-between items-center text-xs font-mono mb-2 text-slate-600">
+                <span class="flex items-center gap-1.5 font-bold text-slate-800">
+                    <span class="w-2.5 h-2.5 rounded-full bg-gc-500 animate-pulse"></span>
+                    LOGBUCH-RUNDE
+                </span>
+                <span class="font-bold text-slate-700">RUNDE <span id="current-round-text" class="text-gc-600 font-bold text-base">1</span> / 10 <span id="dice-count-badge" class="ml-2 text-[11px] px-2 py-0.5 rounded bg-slate-100 text-gc-700 border border-slate-200 font-semibold">(1 Würfel)</span></span>
+            </div>
+            
+            <!-- Round indicators -->
+            <div id="round-indicators" class="grid grid-cols-10 gap-1.5 sm:gap-2">
+                <!-- Javascript populates 10 round indicators -->
+            </div>
+        </div>
+
+        <!-- Dice Board Card -->
+        <div class="w-full glass-panel rounded-3xl p-5 sm:p-7 gc-glow mb-6 relative overflow-hidden bg-white border border-slate-200">
+            <div class="absolute -right-20 -top-20 w-60 h-60 bg-gc-500/5 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="text-center mb-4">
+                <h2 class="text-xs font-bold uppercase tracking-widest text-gc-700 mb-0.5">Aktueller Wurf</h2>
+                <p class="text-xs text-slate-600">Zähle die Geocaches (📦), Geocacher (🤠) und Tauschgegenstände (🎁)!</p>
+            </div>
+
+            <!-- Dice Display -->
+            <div id="dice-wrapper" class="flex flex-wrap justify-center items-center gap-3 sm:gap-4 min-h-[100px] my-3 py-2 px-2">
+                <!-- Dice rendered dynamically -->
+            </div>
+        </div>
+
+        <!-- Input Form Section -->
+        <div class="w-full max-w-xl glass-panel rounded-2xl p-6 border-slate-200 bg-white">
+            <form id="game-form" class="space-y-4" onsubmit="return false;">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    
+                    <!-- Input 1: Geocaches -->
+                    <div class="space-y-1.5">
+                        <label for="input-holes" class="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <span class="text-base">📦</span> Geocaches
+                        </label>
+                        <input type="number" id="input-holes" min="0" max="60" required placeholder="0" class="w-full bg-slate-50 border border-slate-300 focus:border-gc-600 focus:ring-1 focus:ring-gc-600 focus:bg-white rounded-xl px-4 py-2.5 text-lg font-mono font-bold text-slate-900 text-center outline-none transition">
+                    </div>
+
+                    <!-- Input 2: Geocacher -->
+                    <div class="space-y-1.5">
+                        <label for="input-bears" class="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <span class="text-base">🤠</span> Geocacher
+                        </label>
+                        <input type="number" id="input-bears" min="0" max="60" required placeholder="0" class="w-full bg-slate-50 border border-slate-300 focus:border-gc-600 focus:ring-1 focus:ring-gc-600 focus:bg-white rounded-xl px-4 py-2.5 text-lg font-mono font-bold text-slate-900 text-center outline-none transition">
+                    </div>
+
+                    <!-- Input 3: Tauschgegenstände -->
+                    <div class="space-y-1.5">
+                        <label for="input-fish" class="block text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                            <span class="text-base">🎁</span> Tauschgegenstände
+                        </label>
+                        <input type="number" id="input-fish" min="0" max="100" required placeholder="0" class="w-full bg-slate-50 border border-slate-300 focus:border-gc-600 focus:ring-1 focus:ring-gc-600 focus:bg-white rounded-xl px-4 py-2.5 text-lg font-mono font-bold text-slate-900 text-center outline-none transition">
+                    </div>
+                </div>
+
+                <!-- Feedback Area -->
+                <div id="feedback-msg" class="hidden p-3 rounded-xl text-xs font-semibold text-center border transition"></div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="btn-submit" class="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-gc-600 to-gc-500 hover:from-gc-700 hover:to-gc-600 text-white font-bold text-sm tracking-wide shadow-md shadow-gc-500/20 transition active:scale-[0.99] flex items-center justify-center gap-2 border border-gc-600/30">
+                    Antwort überprüfen & Loggen
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
+                </button>
+            </form>
+        </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="w-full bg-gc-100/80 border-t border-gc-200/80 py-4 text-center text-xs text-gc-800 font-semibold shadow-inner mt-auto">
+        <div class="max-w-5xl mx-auto px-4 flex items-center justify-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-gc-500 inline-block"></span>
+            <span>Ein Geocache von den 4Lanfis • Geocaching Würfel Rätsel</span>
+        </div>
+    </footer>
+
+    <!-- Victory Screen Modal -->
+    <div id="modal-victory" class="fixed inset-0 bg-gc-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full border border-slate-200 shadow-2xl text-center space-y-5 relative">
+            <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gc-50 border border-gc-200 text-4xl mb-2 animate-bounce">
+                🏆
+            </div>
+
+            <div class="space-y-2">
+                <h2 class="text-2xl font-extrabold text-slate-900 tracking-tight">Geocache Geloggt!</h2>
+                <p class="text-xs text-slate-600">Du hast das Rätsel von den 4Lanfis gelöst und alle 10 Runden fehlerfrei gemeistert!</p>
+            </div>
+
+            <!-- Password Box -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+                <span class="text-[10px] font-mono text-gc-700 uppercase tracking-widest font-bold">Das Passwort lautet:</span>
+                <div class="flex items-center justify-between bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm">
+                    <code id="password-text" class="font-mono text-sm sm:text-base text-gc-700 font-bold select-all">•••••••••••••••••••••</code>
+                    <button id="btn-copy-pw" class="text-xs bg-gc-600 hover:bg-gc-700 text-white px-3 py-1.5 rounded-lg transition font-sans font-semibold flex items-center gap-1 shadow-sm">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+                        <span id="copy-text">Kopieren</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="pt-2">
+                <button id="btn-restart" class="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold text-xs border border-slate-300 transition">
+                    🔄 Neues Spiel starten (Runde 1)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Web Audio API Sound & Elevator Music Engine
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.musicPlaying = false;
+                this.musicInterval = null;
+                this.step = 0;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playRoll() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                // Multi-click dice tumbling sound effect
+                for (let i = 0; i < 7; i++) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const time = now + i * 0.045 + (Math.random() * 0.01);
+                    osc.type = Math.random() > 0.4 ? 'triangle' : 'sine';
+                    osc.frequency.setValueAtTime(160 + Math.random() * 260, time);
+                    gain.gain.setValueAtTime(0.18, time);
+                    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(time);
+                    osc.stop(time + 0.04);
+                }
+            }
+
+            playCorrect() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const freqs = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                freqs.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    gain.gain.setValueAtTime(0.12, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.3);
+                });
+            }
+
+            playError() {
+                if (!this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(80, now + 0.3);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+
+            toggleMusic() {
+                this.init();
+                if (this.musicPlaying) {
+                    this.stopMusic();
+                } else {
+                    this.startMusic();
+                }
+                return this.musicPlaying;
+            }
+
+            startMusic() {
+                if (this.musicPlaying) return;
+                this.musicPlaying = true;
+                this.step = 0;
+
+                // Fröhliche Fahrstuhlmusik / Elevator Bossa Chords
+                const chords = [
+                    [261.63, 329.63, 392.00, 493.88], // Cmaj7
+                    [293.66, 349.23, 440.00, 523.25], // Dm7
+                    [329.63, 392.00, 493.88, 587.33], // Em7
+                    [220.00, 277.18, 329.63, 392.00], // A7
+                    [293.66, 349.23, 440.00, 523.25], // Dm7
+                    [196.00, 246.94, 293.66, 349.23], // G7
+                    [261.63, 329.63, 392.00, 493.88], // Cmaj7
+                    [196.00, 246.94, 293.66, 349.23]  // G7
+                ];
+
+                const melody = [
+                    523.25, 659.25, 587.33, 523.25, 659.25, 783.99, 659.25, 587.33,
+                    523.25, 440.00, 523.25, 587.33, 659.25, 587.33, 523.25, 493.88
+                ];
+
+                const bpm = 112;
+                const stepTime = (60 / bpm) / 2; // 8th notes
+
+                this.musicInterval = setInterval(() => {
+                    if (!this.musicPlaying || !this.ctx) return;
+                    const now = this.ctx.currentTime;
+                    const bar = Math.floor(this.step / 8) % chords.length;
+                    const currentChord = chords[bar];
+
+                    // Smooth electric piano synth chord pattern
+                    if (this.step % 8 === 0 || this.step % 8 === 3 || this.step % 8 === 6) {
+                        currentChord.forEach(freq => {
+                            const osc = this.ctx.createOscillator();
+                            const gain = this.ctx.createGain();
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(freq, now);
+                            gain.gain.setValueAtTime(0.022, now);
+                            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+                            osc.connect(gain);
+                            gain.connect(this.ctx.destination);
+                            osc.start(now);
+                            osc.stop(now + 0.35);
+                        });
+                    }
+
+                    // Gentle synth bassline
+                    if (this.step % 4 === 0) {
+                        const bassOsc = this.ctx.createOscillator();
+                        const bassGain = this.ctx.createGain();
+                        bassOsc.type = 'triangle';
+                        bassOsc.frequency.setValueAtTime(currentChord[0] / 2, now);
+                        bassGain.gain.setValueAtTime(0.045, now);
+                        bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+                        bassOsc.connect(bassGain);
+                        bassGain.connect(this.ctx.destination);
+                        bassOsc.start(now);
+                        bassOsc.stop(now + 0.4);
+                    }
+
+                    // Cheerful Lounge Chime Melody
+                    if (this.step % 2 === 0) {
+                        const melNote = melody[(this.step / 2) % melody.length];
+                        const melOsc = this.ctx.createOscillator();
+                        const melGain = this.ctx.createGain();
+                        melOsc.type = 'sine';
+                        melOsc.frequency.setValueAtTime(melNote, now);
+                        melGain.gain.setValueAtTime(0.018, now);
+                        melGain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                        melOsc.connect(melGain);
+                        melGain.connect(this.ctx.destination);
+                        melOsc.start(now);
+                        melOsc.stop(now + 0.25);
+                    }
+
+                    // Soft brush hi-hat
+                    if (this.step % 2 === 1) {
+                        const noiseOsc = this.ctx.createOscillator();
+                        const noiseGain = this.ctx.createGain();
+                        noiseOsc.type = 'square';
+                        noiseOsc.frequency.setValueAtTime(9000 + Math.random() * 2000, now);
+                        noiseGain.gain.setValueAtTime(0.004, now);
+                        noiseGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.04);
+                        noiseOsc.connect(noiseGain);
+                        noiseGain.connect(this.ctx.destination);
+                        noiseOsc.start(now);
+                        noiseOsc.stop(now + 0.04);
+                    }
+
+                    this.step++;
+                }, stepTime * 1000);
+            }
+
+            stopMusic() {
+                this.musicPlaying = false;
+                if (this.musicInterval) {
+                    clearInterval(this.musicInterval);
+                    this.musicInterval = null;
+                }
+            }
+        }
+
+        const sfx = new SoundEngine();
+
+        // Game Configuration & State
+        const TOTAL_ROUNDS = 10;
+        let currentRound = 1;
+        let currentDice = [];
+        let solution = { holes: 0, bears: 0, fish: 0 };
+
+        // Dot indices for 3x3 grid face layout (1..9)
+        const dotMap = {
+            1: [5],
+            2: [3, 7],
+            3: [3, 5, 7],
+            4: [1, 3, 7, 9],
+            5: [1, 3, 5, 7, 9],
+            6: [1, 3, 4, 6, 7, 9]
+        };
+
+        function renderDice() {
+            const container = document.getElementById('dice-wrapper');
+            container.innerHTML = '';
+
+            currentDice.forEach((value) => {
+                const diceEl = document.createElement('div');
+                diceEl.className = 'dice dice-rolling';
+
+                const activeDots = dotMap[value] || [];
+                for (let i = 1; i <= 9; i++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'w-full h-full flex items-center justify-center';
+                    if (activeDots.includes(i)) {
+                        const dot = document.createElement('div');
+                        dot.className = 'dot';
+                        cell.appendChild(dot);
+                    }
+                    diceEl.appendChild(cell);
+                }
+
+                container.appendChild(diceEl);
+            });
+        }
+
+        function rollDice() {
+            sfx.init();
+            sfx.playRoll();
+
+            // Round 1 = 1 dice, Round 2 = 2 dice, ..., Round 10 = 10 dice
+            const diceCount = currentRound;
+            currentDice = Array.from({ length: diceCount }, () => Math.floor(Math.random() * 6) + 1);
+
+            // Calculate solutions based on original rule:
+            // - Geocaches (Holes) = Odd dice (1, 3, 5) -> have a center dot
+            // - Geocacher (Bears) = Outer dots around the center dot (3 has 2, 5 has 4)
+            // - Tauschgegenstände (Fish) = Bottom side value of odd dice (7 - value)
+            let caches = 0;
+            let cachers = 0;
+            let swag = 0;
+
+            currentDice.forEach(val => {
+                if (val % 2 !== 0) {
+                    caches += 1;
+                    if (val === 3) cachers += 2;
+                    if (val === 5) cachers += 4;
+                    swag += (7 - val);
+                }
+            });
+
+            solution = { holes: caches, bears: cachers, fish: swag };
+            
+            // Update badge text for current dice count
+            document.getElementById('dice-count-badge').textContent = `(${diceCount} ${diceCount === 1 ? 'Würfel' : 'Würfel'})`;
+            
+            renderDice();
+        }
+
+        function updateProgressUI() {
+            document.getElementById('current-round-text').textContent = currentRound;
+            const container = document.getElementById('round-indicators');
+            container.innerHTML = '';
+
+            for (let i = 1; i <= TOTAL_ROUNDS; i++) {
+                const pill = document.createElement('div');
+                if (i < currentRound) {
+                    pill.className = 'h-2.5 rounded-full bg-gc-600 shadow-sm';
+                } else if (i === currentRound) {
+                    pill.className = 'h-2.5 rounded-full bg-gc-500 ring-2 ring-gc-300 ring-offset-2 ring-offset-white animate-pulse';
+                } else {
+                    pill.className = 'h-2.5 rounded-full bg-slate-200 border border-slate-300';
+                }
+                container.appendChild(pill);
+            }
+        }
+
+        function checkAnswer() {
+            sfx.init();
+            const holesInput = parseInt(document.getElementById('input-holes').value, 10);
+            const bearsInput = parseInt(document.getElementById('input-bears').value, 10);
+            const fishInput = parseInt(document.getElementById('input-fish').value, 10);
+
+            const feedback = document.getElementById('feedback-msg');
+
+            if (isNaN(holesInput) || isNaN(bearsInput) || isNaN(fishInput)) {
+                feedback.textContent = '⚠️ Bitte fülle alle 3 Felder aus!';
+                feedback.className = 'p-3 rounded-xl text-xs font-semibold text-center bg-amber-50 border border-amber-200 text-amber-800 block mb-2';
+                return;
+            }
+
+            const isCorrect = (holesInput === solution.holes) && 
+                              (bearsInput === solution.bears) && 
+                              (fishInput === solution.fish);
+
+            if (isCorrect) {
+                sfx.playCorrect();
+                feedback.textContent = '✅ Richtig geloggt!';
+                feedback.className = 'p-3 rounded-xl text-xs font-semibold text-center bg-emerald-50 border border-emerald-200 text-emerald-800 block mb-2';
+
+                setTimeout(() => {
+                    feedback.className = 'hidden';
+                    document.getElementById('input-holes').value = '';
+                    document.getElementById('input-bears').value = '';
+                    document.getElementById('input-fish').value = '';
+
+                    if (currentRound >= TOTAL_ROUNDS) {
+                        showVictoryScreen();
+                    } else {
+                        currentRound++;
+                        updateProgressUI();
+                        rollDice();
+                    }
+                }, 800);
+
+            } else {
+                sfx.playError();
+                // Die genauen Zahlen werden hier nicht mehr verraten
+                feedback.innerHTML = `❌ Falsch!<br>Neustart ab Runde 1...`;
+                feedback.className = 'p-3 rounded-xl text-xs font-semibold text-center bg-rose-50 border border-rose-200 text-rose-800 block mb-2';
+
+                setTimeout(() => {
+                    feedback.className = 'hidden';
+                    document.getElementById('input-holes').value = '';
+                    document.getElementById('input-bears').value = '';
+                    document.getElementById('input-fish').value = '';
+
+                    currentRound = 1;
+                    updateProgressUI();
+                    rollDice();
+                }, 2500);
+            }
+        }
+
+        // Das Passwort wird zur Laufzeit sicher und maskiert erzeugt
+        function retrievePassphrase() {
+            const _0x1c = [0x87, 0x8e, 0xac, 0xb6, 0xaa, 0xa8, 0xaa, 0xaf, 0xb0, 0xb5, 0xae, 0x6d, 0x8e, 0xa8, 0xb4, 0xb0, 0xb5, 0xae, 0x86, 0x68, 0x6a, 0x6a];
+            return _0x1c.map(function(c) { return String.fromCharCode(c - 0x47); }).join('');
+        }
+
+        function showVictoryScreen() {
+            document.getElementById('password-text').textContent = retrievePassphrase();
+
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 120,
+                    spread: 80,
+                    origin: { y: 0.6 }
+                });
+            }
+            document.getElementById('modal-victory').classList.remove('hidden');
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Initial Game Load
+            updateProgressUI();
+            rollDice();
+
+            // Music Toggle Button Event Listener
+            const musicBtn = document.getElementById('btn-toggle-music');
+            if (musicBtn) {
+                musicBtn.addEventListener('click', () => {
+                    const isPlaying = sfx.toggleMusic();
+                    document.getElementById('music-text').textContent = isPlaying ? 'Musik: An' : 'Musik: Aus';
+                    document.getElementById('music-icon').textContent = isPlaying ? '🎶' : '🎵';
+                    if (isPlaying) {
+                        musicBtn.classList.add('bg-gc-100', 'border-gc-300');
+                    } else {
+                        musicBtn.classList.remove('bg-gc-100', 'border-gc-300');
+                    }
+                });
+            }
+
+            let cheatBuffer = '';
+            const _0xc1 = [0x69, 0x64, 0x64, 0x71, 0x64].map(c => String.fromCharCode(c)).join('');
+            const _0x1a = [0x6c, 0x65, 0x76, 0x65, 0x6c].map(c => String.fromCharCode(c)).join('');
+            const _0x2b = [0x72, 0x75, 0x6e, 0x64, 0x65].map(c => String.fromCharCode(c)).join('');
+            const _0x3c = [0x6c, 0x76, 0x6c].map(c => String.fromCharCode(c)).join('');
+
+            document.addEventListener('keydown', (e) => {
+                cheatBuffer += e.key.toLowerCase();
+                if (cheatBuffer.length > 20) {
+                    cheatBuffer = cheatBuffer.slice(-20);
+                }
+                
+                if (cheatBuffer.includes(_0xc1)) {
+                    cheatBuffer = '';
+                    showVictoryScreen();
+                }
+
+                for (let r = 1; r <= TOTAL_ROUNDS; r++) {
+                    if (cheatBuffer.includes(_0x1a + r) || cheatBuffer.includes(_0x2b + r) || cheatBuffer.includes(_0x3c + r)) {
+                        cheatBuffer = '';
+                        currentRound = r;
+                        updateProgressUI();
+                        rollDice();
+                        break;
+                    }
+                }
+            });
+
+            // Submit Form
+            document.getElementById('game-form').addEventListener('submit', (e) => {
+                e.preventDefault();
+                checkAnswer();
+            });
+
+            // Restart Button from Victory Modal
+            document.getElementById('btn-restart').addEventListener('click', () => {
+                currentRound = 1;
+                document.getElementById('modal-victory').classList.add('hidden');
+                updateProgressUI();
+                rollDice();
+            });
+
+            // Copy Password Button
+            document.getElementById('btn-copy-pw').addEventListener('click', () => {
+                const passwordText = document.getElementById('password-text').innerText;
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(passwordText);
+                } else {
+                    const input = document.createElement('input');
+                    input.value = passwordText;
+                    document.body.appendChild(input);
+                    input.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(input);
+                }
+                const copyTextEl = document.getElementById('copy-text');
+                copyTextEl.textContent = 'Kopiert!';
+                setTimeout(() => {
+                    copyTextEl.textContent = 'Kopieren';
+                }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
